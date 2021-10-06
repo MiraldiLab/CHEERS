@@ -127,13 +127,14 @@ for countsLine in countsLines:
             chr = countsLineParts[0]
             start = countsLineParts[1]
             end = countsLineParts[2]
-            for i in range(3, len(countsLineParts)):
+            for i in range(3, len(countsLineParts)):# subtract 1 for cheers norm
                 normValues[samplesList[i-3]].append({
                     'chr': chr,
                     'start': float(start),
                     'end': float(end),
                     'value': float(countsLineParts[i].replace('\r', ''))
                 })
+
         else:
             headerNotRead = False  # now first raw is already read
             for i in range(3, len(countsLineParts)):
@@ -148,22 +149,23 @@ Ranking step
 3. rank sorted values (take values from the iterator in the for cycle)
 4. if the value already exist rank them all the same with the lowest rank i.e (1, 2, 3, 3, 3, 4, 5 ) -> (1, 2, 3, 3, 3, 6, 7)
  '''
-for sample in samplesList:
-    normValues[sample] = sorted(normValues[sample], key=lambda parameter: parameter['value'])
-    lastValue = None
-    lastRank = None
-    for rank in range(0, len(normValues[sample])):
-        if (not (lastValue)):
+#for sample in samplesList[0]:
+sample  = samplesList[0]
+normValues[sample] = sorted(normValues[sample], key=lambda parameter: parameter['value'])
+lastValue = None
+lastRank = None
+for rank in range(0, len(normValues[sample])):
+    if (not (lastValue)):
+        lastValue = normValues[sample][rank]["value"]
+        lastRank = float(rank)
+        normValues[sample][rank]['rank'] = lastRank
+    else:
+        if (lastValue == normValues[sample][rank]['value']):
+            normValues[sample][rank]['rank'] = lastRank
+        else:
             lastValue = normValues[sample][rank]["value"]
             lastRank = float(rank)
             normValues[sample][rank]['rank'] = lastRank
-        else:
-            if (lastValue == normValues[sample][rank]['value']):
-                normValues[sample][rank]['rank'] = lastRank
-            else:
-                lastValue = normValues[sample][rank]["value"]
-                lastRank = float(rank)
-                normValues[sample][rank]['rank'] = lastRank
 
 
 #read all snp files containing the LD information
@@ -198,6 +200,7 @@ if args.ld is not None:
                         'pos': position,
                         'chr': snpInLDParts[0]
                     })
+
 
 if args.snp_list is not None:
     ldFile = open(args.snp_list, "r")
@@ -271,6 +274,7 @@ for name in samplesList:
 SNPsOverlappingPeaks += '\n'
 peaksOverlappingSNP += '\n'
 
+
 '''
 fill in the positions and normalised ranks for SNPsOverlappingPeaks
 '''
@@ -283,7 +287,6 @@ for snp in overlappedPeaks: #take each SNP (key in the overlappedPeaks) that ove
     for peak in overlappedPeak:
         SNPsOverlappingPeaks += str(int(peak['rank'])) + '\t' #add ranks
     SNPsOverlappingPeaks += '\n'
-
 
 '''
 create the output of all the SNPs and the overlapping peaks
@@ -350,11 +353,11 @@ n = len(uniquePeaks)
 mean_sd = math.sqrt((N**2-1)/(12*n))
 mean_mean = (1+N)/2
 
-for sample in samplesList:
-    observed = observedMean[sample]
-    if not (sample in pValue):
-        pValue[sample] = ()
-    pValue[sample] = 1-norm.cdf(observed, loc=mean_mean, scale=mean_sd)
+#for sample in samplesList:
+observed = observedMean[sample]
+if not (sample in pValue):
+    pValue[sample] = ()
+pValue[sample] = 1-norm.cdf(observed, loc=mean_mean, scale=mean_sd)
 
 '''
 create the txt file with the p-values
