@@ -13,41 +13,8 @@ inputs:
 
 usage:
 python CHEERS_computeEnrichment.py --input data.txt --ld ~/LD/trait/ --trait trait_name --outdir ~/output/directory/
-or 
+
 python CHEERS_computeEnrichment.py --input data.txt --snp_list snp_list.txt --trait trait_name --outdir ~/output/directory/
-
-
-Copyright (C) 2019  Blagoje Soskic
-
-This file is part of CHEERS code.
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-    The above copyright notice and this permission notice shall be included in
-    all copies or substantial portions of the Software.
-
-BY USING THE SOFTWARE YOU ACKNOWLEDGE THAT YOU HAVE READ AND UNDERSTAND THE
-TERMS OF USE BELOW. 
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-
-THIS SOFTWARE IS TO BE USED AS A RESEARCH TOOL ONLY. THE SOFTWARE TOOL SHALL
-NOT BE USED AS A DIAGNOSTIC DECISION MAKING SYSTEM AND MUST NOT BE USED TO
-MAKE A CLINICAL DIAGNOSIS OR REPLACE OR OVERRULE A LICENSED HEALTH CARE
-PROFESSIONAL'S JUDGMENT OR CLINICAL DIAGNOSIS. ANY ACTION THE RESEARCHER TAKES
-IN RESPONSE TO THE INFORMATION CONTAINED WITHIN IS AT THE RESEARCHER'S
-DISCRETION ONLY.
 
 '''
 
@@ -58,29 +25,31 @@ import math
 import argparse
 import time
 import sys
-
-#parse arguments
+import glob
+# Parse arguments
 parser = argparse.ArgumentParser(description = "CHEERS computes the disease enrichment within functional annotations by taking into account quantitative changes in read counts within peaks", formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
 parser.add_argument("--input", help = "Text file containing peak coordinates and specificity scores for each of the analyzed samples")
 parser.add_argument("--ld", help = "Directory with LD information for each SNP if CHEERS is used on all SNPs in LD")
 parser.add_argument("--snp_list", help = "list of SNPs if CHEERS is used on finemapped set")
 parser.add_argument("--trait", help = "Name of the analyzed trait")
 parser.add_argument("--outdir", help = "Directory where to output results")
+
 args = parser.parse_args()
 
-#set the timer
+# Set the timer
 start_time1 = time.time()
 
-#stop the execution if all the parameters are not there
+# Stop the execution if all the parameters are not there
 if args.input is None:
     print ("Please provide the file that is output of CHEERS_normalize.py.")
     sys.exit()
 
-if (args.ld is None and args.snp_list is None):
+if args.ld is None and args.snp_list is None:
     print ("Please provide path to LD or SNP-list.")
     sys.exit(1)
 
-if (args.ld is not None and args.snp_list is not None):
+if args.ld is not None and args.snp_list is not None:
     print ("Please provide only path to LD or SNP-list.")
     sys.exit(1)
 
@@ -143,7 +112,7 @@ for countsLine in countsLines:
 
 ''' 
 Ranking step
-1. go over the list of samples
+1. go over the list of samples 
 2. sort euclidean norm values from the lowest to the highest within each sample
 3. rank sorted values (take values from the iterator in the for cycle)
 4. if the value already exist rank them all the same with the lowest rank i.e (1, 2, 3, 3, 3, 4, 5 ) -> (1, 2, 3, 3, 3, 6, 7)
@@ -179,7 +148,7 @@ each chr directory there are .txt files named after lead SNP (for example result
 if args.ld is not None:
     ldPerChr = os.listdir(args.ld)
     for chrDir in ldPerChr:
-        leadSnps = os.listdir(os.path.join(args.ld, chrDir))
+        leadSnps = glob.glob(os.path.join(args.ld, chrDir, "*.txt"))
         for leadSnp in leadSnps:
             leadSnpFile = open(os.path.join(args.ld, chrDir, leadSnp), "r")
             leadSnp = leadSnpFile.read()
@@ -289,8 +258,7 @@ for snp in overlappedPeaks: #take each SNP (key in the overlappedPeaks) that ove
 create the output of all the SNPs and the overlapping peaks
 '''
 
-name = str(args.outdir) + str(args.trait) + '_SNPsOverlappingPeaks.txt'
-textFile = open(name, "w")
+textFile = open(os.path.join(args.outdir, args.trait + '_SNPsOverlappingPeaks.txt'), "w")
 textFile.write(SNPsOverlappingPeaks)
 textFile.close()
 
@@ -325,12 +293,10 @@ for key in uniquePeaks:
         peaksOverlappingSNP += str(int(rank)) + '\t'
     peaksOverlappingSNP += '\n'
 
-name2 = str(args.outdir) + str(args.trait) + '_uniquePeaks.txt'
-
 '''
 create the output of all the peaks that are overlapping SNP
 '''
-textFile2 = open(name2, "w")
+textFile2 = open(os.path.join(args.outdir, args.trait + '_uniquePeaks.txt'), "w")
 textFile2.write(peaksOverlappingSNP)
 textFile2.close()
 
@@ -359,8 +325,8 @@ for sample in samplesList:
 '''
 create the txt file with the p-values
 '''
-pValueName = str(args.outdir) + str(args.trait) + '_disease_enrichment_pValues.txt'
-f = open(pValueName, 'a')
+f = open(os.path.join(args.outdir, args.trait + '_disease_enrichment_pValues.txt'), 'a')
+
 for key, value in list(pValue.items()):
     f.write(key + '\t' + str(value) + '\n')
 f.close()
@@ -368,8 +334,9 @@ f.close()
 '''
 create the txt file with the mean ranks
 '''
-meanName = str(args.outdir) + str(args.trait) + '_disease_enrichment_observedMeanRank.txt'
-f = open(meanName, 'w')
+
+f = open(os.path.join(args.outdir, args.trait + '_disease_enrichment_observedMeanRank.txt'), 'w')
+
 for key,value in list(observedMean.items()):
     f.write(key + '\t' + str(value) + '\n')
 f.close()
@@ -381,8 +348,7 @@ output in the log file
 end_time1 = time.time()
 running_time = (end_time1 - start_time1)
 
-logfileName = str(args.outdir) + str(args.trait) + ".log"
-logfile = open(logfileName, "w")
+logfile = open(os.path.join(args.outdir, args.trait + ".log"), "w")
 
 logfile.write('Total number of peaks\t%s\n' % (str(N)))
 logfile.write('Number of overlapping peaks\t%s\n' % (str(n)))
